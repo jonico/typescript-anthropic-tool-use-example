@@ -239,6 +239,7 @@ async function main() {
       console.log(`[SSE] Connection closed: ${sessionId}`);
       await mcpServer.close();
       transports.delete(sessionId);
+      await mcpServer.close();
     });
   });
 
