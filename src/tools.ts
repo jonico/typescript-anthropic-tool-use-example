@@ -26,6 +26,7 @@ import {
   searchNetworkZodSchema,
   search_postman_network,
 } from './postman-network-search';
+import { postmanEntitiesByTagTool, getElementsByTag, getElementsByTagZodSchema } from './postman-entities-by-tag';
 
 type CreateSongParams = {
   prompt: string;
@@ -330,7 +331,8 @@ const zodSchemas = {
   get_all_elements_and_folders: getAllElementsAndFoldersZodSchema,
   get_collection: getCollectionZodSchema,
   generate_tool: generateToolZodSchema,
-  search_postman_network: searchNetworkZodSchema
+  search_postman_network: searchNetworkZodSchema,
+  get_elements_by_tag: getElementsByTagZodSchema
 };
 
 // Add a utility function for truncating strings
@@ -653,6 +655,7 @@ const tools: Anthropic.Tool[] = [
   postmanCollectionTool.definition,
   postmanToolgenTool.definition,
   postmanNetworkSearchTool.definition,
+  postmanEntitiesByTagTool.definition,
 ];
 
 const functions = {
@@ -972,6 +975,25 @@ ${response.meta.nextCursor ? `Next Page Cursor: ${response.meta.nextCursor}` : '
         type: "text",
         text: `Error searching network: ${err.message}`
       }];
+    }
+  },
+  get_elements_by_tag: async (params) => {
+    try {
+      const response = await getElementsByTag(params);
+      if ('data' in response && response.data.entities.length > 0) {
+        const text = `Found ${response.data.entities.length} entities for tag '${params.slugId}':\n` +
+          response.data.entities.map((e, i) => `#${i + 1}: ${e.entityType} - ${e.entityId}`).join('\n') +
+          (response.meta.nextCursor ? `\nNext Cursor: ${response.meta.nextCursor}` : '');
+        return [{ type: 'text', text }];
+      } else if ('data' in response && response.data.entities.length === 0) {
+        return [{ type: 'text', text: 'No entities found for this tag.' }];
+      } else if ('detail' in response) {
+        return [{ type: 'text', text: `Error fetching entities by tag: ${response.detail}` }];
+      } else {
+        return [{ type: 'text', text: 'Unknown error fetching entities by tag.' }];
+      }
+    } catch (err) {
+      return [{ type: 'text', text: `Error fetching entities by tag: ${err.message}` }];
     }
   },
 };
