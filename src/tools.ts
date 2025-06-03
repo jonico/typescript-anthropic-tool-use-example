@@ -248,7 +248,9 @@ type ImageGenerationParams = {
   prompt: string;
   n?: number;
   size?: '256x256' | '512x512' | '1024x1024';
-  model?: 'dall-e-3' | 'dall-e-2';
+  model?: 'dall-e-3' | 'dall-e-2' | 'gpt-image-1';
+  quality?: 'standard' | 'hd' | 'low';
+  response_format?: 'url' | 'b64_json';
 };
 
 type ImageData = {
@@ -317,7 +319,9 @@ const zodSchemas = {
     prompt: z.string().describe("The description of the image to generate"),
     n: z.number().int().min(1).max(10).optional().describe("The number of images to generate. Defaults to 1. dalle-3 only supports 1."),
     size: z.enum(["256x256", "512x512", "1024x1024"]).optional().describe("The size of the generated image. Larger sizes produce more detailed images. Defaults to 1024x1024. dall-e-3 only supports 1024x1024."),
-    model: z.enum(["dall-e-3", "dall-e-2"]).optional().describe("The model to use for image generation.")
+    model: z.enum(["dall-e-3", "dall-e-2", "gpt-image-1"]).optional().describe("The model to use for image generation."),
+    quality: z.enum(["standard", "hd", "low"]).optional().describe("The quality of the generated image."),
+    response_format: z.enum(["url", "b64_json"]).optional().describe("The response format of the generated image.")
   },
 
   get_entities_by_query: {
@@ -344,27 +348,88 @@ const truncateString = (str: string, maxLength?: number) => {
 
 const generateImage = async ({
   prompt,
-  n = 1,
-  size = '1024x1024',
-  model = 'dall-e-3',
-}: ImageGenerationParams): Promise<ImageGenerationResponse> => {
+  n,
+  size,
+  model,
+  quality,
+  response_format,
+  style,
+  output_format,
+  output_compression,
+  moderation,
+  background,
+  user
+}: {
+  prompt: string;
+  n?: number;
+  size?: string;
+  model?: 'dall-e-3' | 'dall-e-2' | 'gpt-image-1';
+  quality?: string;
+  response_format?: 'url' | 'b64_json';
+  style?: 'vivid' | 'natural';
+  output_format?: 'png' | 'jpeg' | 'webp';
+  output_compression?: number;
+  moderation?: 'auto' | 'low';
+  background?: 'auto' | 'transparent' | 'opaque';
+  user?: string;
+}) => {
   const baseUrl = 'https://api.openai.com/v1';
-
   try {
+    // Model selection and allowed params
+    let usedModel = model;
+    if (!usedModel) {
+      // If any gpt-image-1 specific param is set, use gpt-image-1, else default to dall-e-3
+      if (output_format || output_compression || moderation || background) {
+        usedModel = 'gpt-image-1';
+      } else {
+        usedModel = 'dall-e-3';
+      }
+    }
+    let body: any = { prompt, model: usedModel };
+    if (usedModel === 'dall-e-2') {
+      body.n = n ?? 1;
+      body.size = size && ['256x256', '512x512', '1024x1024'].includes(size) ? size : '1024x1024';
+      body.quality = 'standard';
+      body.response_format = response_format || 'url';
+    } else if (usedModel === 'dall-e-3') {
+      body.n = 1; // only n=1 supported
+      body.size = size && ['1024x1024', '1792x1024', '1024x1792'].includes(size) ? size : '1024x1024';
+      if (quality && ['standard', 'hd'].includes(quality)) body.quality = quality;
+      else body.quality = 'standard';
+      body.response_format = response_format || 'url';
+      if (style && ['vivid', 'natural'].includes(style)) body.style = style;
+    } else if (usedModel === 'gpt-image-1') {
+      if (n) body.n = Math.max(1, Math.min(10, n));
+      body.size = size && ['auto', '1024x1024', '1536x1024', '1024x1536'].includes(size) ? size : 'auto';
+      // Default to 'low' quality for gpt-image-1 if not specified
+      if (quality && ['auto', 'high', 'medium', 'low'].includes(quality)) body.quality = quality;
+      else body.quality = 'low';
+      if (output_format && ['png', 'jpeg', 'webp'].includes(output_format)) body.output_format = output_format;
+      if ((output_format === 'jpeg' || output_format === 'webp') && typeof output_compression === 'number') body.output_compression = output_compression;
+      if (moderation && ['auto', 'low'].includes(moderation)) body.moderation = moderation;
+      if (background && ['auto', 'transparent', 'opaque'].includes(background)) body.background = background;
+      // gpt-image-1 does not support response_format
+    }
+    if (user) body.user = user;
+    // Remove undefined values
+    Object.keys(body).forEach(key => body[key] === undefined && delete body[key]);
+    // Log the actual API call details (without API key)
+    console.log('[generateImage] Calling OpenAI image API with:', {
+      url: `${baseUrl}/images/generations`,
+      body
+    });
     const response = await fetch(`${baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt, n, size, model }),
+      body: JSON.stringify(body),
     });
-
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(JSON.stringify(errorData));
     }
-
     return await response.json();
   } catch (error) {
     console.error('Error generating image:', error);
@@ -642,8 +707,18 @@ const tools: Anthropic.Tool[] = [
         },
         model: {
           type: "string",
-          enum: ["dall-e-3", "dall-e-2"],
+          enum: ["dall-e-3", "dall-e-2", "gpt-image-1"],
           description: "The model to use for image generation."
+        },
+        quality: {
+          type: "string",
+          enum: ["standard", "hd", "low"],
+          description: "The quality of the generated image."
+        },
+        response_format: {
+          type: "string",
+          enum: ["url", "b64_json"],
+          description: "The response format of the generated image."
         }
       },
       required: ["prompt"],
@@ -789,13 +864,34 @@ ${content.body?.storage?.value ? `\nContent:\n${content.body.storage.value}` : '
       console.log('-------- DALL-E response:', response);
 
       if (response.data && response.data.length > 0) {
-        return response.data.map(image => ({
-          type: "text",
-          text: `Generated image:
-Original prompt: ${input.prompt}
-Revised prompt: ${image.revised_prompt}
-Image URL: ${image.url}`
-        }));
+        return response.data.map(image => {
+          // Prefer b64_json if present and requested
+          if (image.b64_json) {
+            return [
+              {
+                type: "text",
+                text: `Generated image (base64)\nOriginal prompt: ${input.prompt}`
+              },
+              {
+                type: "image",
+                data: `${image.b64_json}`,
+                mimeType: "image/png", // Assuming PNG, adjust if needed
+                alt: `Generated image (base64)\nOriginal prompt: ${input.prompt}`
+              }            ];
+          } else if (image.url) {
+            // Use text type for URLs
+            return {
+              type: "text",
+              text: `Generated image URL: ${image.url}\nOriginal prompt: ${input.prompt}\nRevised prompt: ${image.revised_prompt}`
+            };
+          } else {
+            // Fallback for unexpected response
+            return {
+              type: "text",
+              text: 'Unsupported image type or missing image data.'
+            };
+          }
+        });
       }
 
       return [{

@@ -140,13 +140,17 @@ async function callTool(toolBlock: ToolUseBlock) {
   const tool = tools.find((tool) => tool.name === name);
   if (tool) {
     const toolOutput = await functions[name](input);
+    // Flatten toolOutput if it is an array of arrays
+    const flatContent = Array.isArray(toolOutput)
+      ? toolOutput.flatMap(item => Array.isArray(item) ? item : [item])
+      : [toolOutput];
     return {
       role: "user",
       content: [
         {
           type: "tool_result",
           tool_use_id: id,
-          content: toolOutput,
+          content: flatContent,
         },
       ],
     } as MessageParam;
@@ -179,14 +183,20 @@ async function processResponse(response: Anthropic.Messages.Message) {
 // Add this utility function after the imports
 type ContentWrapper = {
   content: Array<{
-    type: "text";
-    text: string;
+    type: string;
+    text?: string;
+    tool_use_id?: string;
+    content?: any; // This can be any type depending on the tool output
   }>;
 };
 
 const wrapToolResponse = (result: any): ContentWrapper => {
+  // If result is an array of arrays (e.g., [[text, image], ...]), flatten it
+  const flat = Array.isArray(result)
+    ? result.flatMap(item => Array.isArray(item) ? item : [item])
+    : [result];
   return {
-    content: result
+    content: flat
   };
 };
 
