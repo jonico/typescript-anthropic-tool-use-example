@@ -149,7 +149,7 @@ Created: ${collection.info.createdAt}
 Updated: ${collection.info.updatedAt}
 Last Updated By: ${collection.info.lastUpdatedBy}
 ID: ${collection.info.uid}
-Postman View URL: ${getPostmanViewUrl(collection.info._postman_id)}
+Postman View URL: ${getPostmanViewUrl(collection.info.uid)}
 
 ## Description
 ${collection.info.description || 'No description provided'}
