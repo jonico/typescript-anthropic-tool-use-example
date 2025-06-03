@@ -29,14 +29,8 @@ The embedded Multi-Channel Prompt (MCP) server enables LLMs like Claude to inter
 - Requires `ACEDATA_API_KEY` in environment variables
 - Returns audio URL, video URL, and lyrics
 
-### DALL-E Image Generation
-- Generate images from text descriptions using DALL-E 3
-- Supports different image sizes (256x256, 512x512, 1024x1024)
-- DALL-E 3 specific features:
-  - High-quality image generation
-  - Revised prompts for better results
-  - Limited to 1 image per request
-  - Only supports 1024x1024 size
+### Image Generation (DALL-E & GPT-Image-1)
+- Generate images from text descriptions using DALL-E 2/3 or GPT-Image-1
 - Requires `OPENAI_API_KEY` in environment variables
 
 ### Confluence Content Management
@@ -75,6 +69,9 @@ The embedded Multi-Channel Prompt (MCP) server enables LLMs like Claude to inter
 - Search the Postman Network for API requests based on a query
 - Supports filtering by verified publishers
 - Supports pagination
+
+### Postman Entities By Tag
+- Retrieve Postman elements (collections, APIs, workspaces) by tag (slugId) and entity type
 
 ## Setup
 
@@ -140,8 +137,6 @@ Find all API entities in Backstage that are related to our payment system and sh
 ```
 Get the details of our order management collection and list all its endpoints
 ```
-
-```
 8. Search Postman Network:
 ```
 Can you show me the top 10 requests in postman's network dealing with Harry Potter including the URL to have a look at the collection?
@@ -150,6 +145,11 @@ Can you show me the top 10 requests in postman's network dealing with Harry Pott
 9. Generate TypeScript Code for API Integration:
 ```
 Generate the TypeScript code required to integrate the API request for retrieving all Hogwarts students from the Harry Potter collection in Postman, using the Anthropic agent framework
+```
+
+10. Postman Entities by Tag:
+```
+Get all Postman entities tagged with 'harry-potter' and show their details
 ```
 
 

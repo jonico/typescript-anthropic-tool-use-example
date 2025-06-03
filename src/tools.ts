@@ -686,7 +686,7 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: "generate_image",
-    description: "Generate an image using DALL-E 3",
+    description: "Generate an image using OpenAI's DALL-E or GPT Image models",
     input_schema: {
       type: "object",
       properties: {
@@ -861,7 +861,7 @@ ${content.body?.storage?.value ? `\nContent:\n${content.body.storage.value}` : '
   generate_image: async (input: ImageGenerationParams) => {
     try {
       const response = await generateImage(input);
-      console.log('-------- DALL-E response:', response);
+      // console.log('-------- DALL-E response:', response);
 
       if (response.data && response.data.length > 0) {
         return response.data.map(image => {
