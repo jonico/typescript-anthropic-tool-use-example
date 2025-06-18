@@ -1,6 +1,6 @@
 # Typescript Anthropic Tool Use Example
 
-This repository demonstrates how to use Claude with multiple API tools including Weather, Music Generation (Suno), Image Generation (DALL-E), Content Management (Confluence), Backstage Catalog, Postman Private API Network, and Postman Collections.
+This repository demonstrates how to use Claude with multiple API tools including Weather, Music Generation (Suno), Image Generation (DALL-E, GPT-IMAGE-1), Content Management (Confluence), Backstage Catalog, Postman Private API Network, and Postman Collections.
 
 ![LLM with API Tools Architecture](llm-with-api-tools.png)
 
