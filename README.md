@@ -141,13 +141,12 @@ Find all API entities in Backstage that are related to our payment system and sh
 Get the details of our order management collection and list all its endpoints
 ```
 
-```
 8. Search Postman Network:
 ```
 Can you show me the top 10 requests in postman's network dealing with Harry Potter including the URL to have a look at the collection?
 ```
 
-```
+
 9. Generate TypeScript Code for API Integration:
 ```
 Generate the TypeScript code required to integrate the API request for retrieving all Hogwarts students from the Harry Potter collection in Postman, using the Anthropic agent framework
